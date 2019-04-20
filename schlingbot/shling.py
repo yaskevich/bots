@@ -101,7 +101,7 @@ def echo(bot, update):
                 user_meta  = c.fetchone()
                 hseids = user_meta[0].split()
                 user_hse_id  = hseids[int(txt)-1]
-                update.message.reply_text("Вы выбрали " + txt)
+                update.message.reply_text("Вы выбрали " + txt + "\nТеперь можно ввести дату в виде номера дня и названия месяца и получить расписание :-)")
                 c.execute("UPDATE users SET hse_id = ?, user_state = ? WHERE user_id =?", (user_hse_id, "hseid", uid))
                 conn.commit()
             else:
@@ -125,7 +125,24 @@ def echo(bot, update):
                     return
         elif user_info[0] == "hseid":
             # update.message.reply_text("Вы " + str(user_info[1]))
-            payload = {'start': '2019.04.23', 'finish': '2019.04.23', 'lng': "1"}
+            day  = '23'
+            match = re.search(r'\d+', txt) 
+            if match:
+                day = match.group(0)
+                if len(day) == 1:
+                        day = '0' + day
+            mts  = [["янв", 1], ["фев", 2], ["мар", 3], ["апр", 4], ["май", 5], ["июн", 6], 
+            ["июл", 7], ["авг", 8], ["сент", 9], ["окт", 10], ["ноя", 11], ["дек", 12]]
+            mnum = '04'
+            for m in mts:
+                if m[0] in txt:
+                    mnum  = str(m[1])
+                    if len(mnum) == 1:
+                        mnum = '0' + mnum
+            date_st = '2019.'+ mnum + "." + day
+            date_fn = '2019.'+ mnum + "." + day
+
+            payload = {'start': date_st, 'finish': date_fn, 'lng': "1"}
             r = requests.get('https://ruz.hse.ru/api/schedule/student/'+str(user_info[1]), params=payload,  verify=False)
             if r.status_code == 200:
                 d = r.json()
@@ -212,7 +229,7 @@ def error(bot, update, error):
 
 def main():
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(#put real token here#)
+    updater = Updater(#token here#)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
