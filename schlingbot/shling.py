@@ -29,6 +29,13 @@ import sqlite3
 conn = sqlite3.connect('shling.db', check_same_thread=False)
 import telegram
 import random
+
+import configparser
+config = configparser.ConfigParser()
+config.read('bot.ini')
+tk  = config['security']['token']
+
+
 # Create table
 # c.execute('''CREATE TABLE IF NOT EXISTS stuff
              # (user_id integer, lvl int, yr int, group_num int, group_id int, firstname text, lastname text, datefirst datetime, datelast datetime)''')
@@ -229,7 +236,7 @@ def error(bot, update, error):
 
 def main():
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(#token here#)
+    updater = Updater(tk)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
