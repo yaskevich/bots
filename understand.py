@@ -1,3 +1,5 @@
+
+import sys
 import re
 import datetime
 import requests, unicodedata
@@ -30,40 +32,40 @@ curlist  = {
         [[r"\bэфир",r"\bэтер", r"Ξ" ], ["ETH"]],
         ],
     "cbr": [
-        [[r"\bдо[л]+ар",r"\bсша", r"\bштат", r"\bамерик", r"\bбакс", r":heavy_dollar_sign:", r'зел[её]н' ], ["USD"]],
-        [[r"\bа[встр]+ал",r"\bдо[л]+ар"], ["AUD"]],
-        [[r"\bазербайджан",r"\bманат"], ["AZN"]],
-        [[r"\bфунт",r"\bстерлинг",r"\bвеликобрит",r"\bкоролевств", r"\bбритан", r":England:", r":Scotland:", r":Wales:", r'£'], ["GBP"]],
-        [[r"\bармян", r"\bармен",r"\bдрам"], ["AMD"]],
-        [[r"\bбел", r"\bбелорус", r"\bбеларус", r"\bрубе?л"], ["BYN"]],
-        [[r"\bболгар",r"\bлев"], ["BGN"]],
-        [[r"\bбразил",r"\bреал"], ["BRL"]],
-        [[r"\bвенгер",r"\bвенгр",r"\bфоринт"], ["HUF"]],
-        [[r"\bг[оа]нконг",r"\bдо[л]+ар"], ["HKD"]],
-        [[r"\bдатск", r"\bдацк", r"\bдан",r"\bкрон"], ["DKK"]],	
-        [[r"\bевр", r"€", r":European_Union:"], ["EUR"]],
-        [[r"\bинди",r"\bрупи"], ["INR"]],
-        [[r"\bказах",r"\bтенге"], ["KZT"]],
-        [[r"\bканад",r"\bдо[л]+ар"], ["CAD"]],
-        [[r"\bкиргиз",r"\bсом"], ["KGS"]],
-        [[r"\bкитай",r"\bюан"], ["CNY"]],
-        [[r"\bмолдав", r"\bмолдов",r"\bлее", r"\bлея", r"\bлей"], ["MDL"]],
-        [[r"\bнорвеж",r"\bнорвег",r"\bкрон"], ["NOK"]],
-        [[r"\bпольск",r"\bпольш",r"\bзлот"], ["PLN"]],
-        [[r"\bрумын",r"\bлее", r"\bлея", r"\bлей"], ["RON"]],
+        [[r"\bдо[л]+ар", r"\bбакс", r":heavy_dollar_sign:", r'зел[её]н' ], ["USD"]],
+        [[r"\bдо[л]+ар"], ["AUD"]],
+        [[r"\bманат"], ["AZN"]],
+        [[r"\bфунт",r"\bстерлинг", r'£'], ["GBP"]],
+        [[r"\bдрам"], ["AMD"]],
+        [[r"\bрубе?л"], ["BYN"]],
+        [[r"\bлев"], ["BGN"]],
+        [[r"\bреал"], ["BRL"]],
+        [[r"\bфоринт"], ["HUF"]],
+        [[r"\bдо[л]+ар"], ["HKD"]],
+        [[r"\bкрон"], ["DKK"]],	
+        [[r"\bевро\b", r"€"], ["EUR"]],
+        [[r"\bрупи"], ["INR"]],
+        [[r"\bтенге"], ["KZT"]],
+        [[r"\bдо[л]+ар"], ["CAD"]],
+        [[r"\bсом"], ["KGS"]],
+        [[r"\bюан"], ["CNY"]],
+        [[r"\bлее", r"\bлея", r"\bлей"], ["MDL"]],
+        [[r"\bкрон"], ["NOK"]],
+        [[r"\bзлот"], ["PLN"]],
+        [[r"\bлее", r"\bлея", r"\bлей"], ["RON"]],
         [[r"\bсдр"], ["XDR"]],
-        [[r"\bсингапур",r"\bдо[л]+ар"], ["SGD"]],
-        [[r"\bтаджи[кц]",r"\bсомон"], ["TJS"]],
-        [[r"\bтурец",r"\bтурц",r"\bлир"], ["TRY"]],
-        [[r"\bтуркмен",r"\bманат"], ["TMT"]],
-        [[r"\bузбе[кц]",r"\bсум"], ["UZS"]],
-        [[r"\bукраин",r"\bгривен", r"\bгривн"], ["UAH"]],
-        [[r"\bчешс", r"\bчеx",r"\bкрон"], ["CZK"]],
-        [[r"\bшведс",r"\bшвец",r"\bкрон"], ["SEK"]],
-        [[r"\bшвейцар",r"\bфранк"], ["CHF"]],
-        [[r"\bюжноафрикан", r"\bафрик", r"\bрэнд",r"\bранд"], ["ZAR"]],
-        [[r"\bвон",r"\bкорея", r"\bкорей"], ["KRW"]],
-        [[r"\bяпон",r"\bиен",r"\bен", r'¥'], ["JPY"]]
+        [[r"\bдо[л]+ар"], ["SGD"]],
+        [[r"\bсомон"], ["TJS"]],
+        [[r"\bлир"], ["TRY"]],
+        [[r"\bманат"], ["TMT"]],
+        [[r"\bсум"], ["UZS"]],
+        [[r"\bгривен", r"\bгривн"], ["UAH"]],
+        [[r"\bкрон"], ["CZK"]],
+        [[r"\bкрон"], ["SEK"]],
+        [[r"\bфранк"], ["CHF"]],
+        [[r"\bрэнд",r"\bранд"], ["ZAR"]],
+        [[r"\bвон"], ["KRW"]],
+        [[r"\bиен",r"\bен", r'¥'], ["JPY"]]
         ],
 }
 popular_currencies = [c[1][0] for c in curlist["cbr"]]
@@ -71,20 +73,48 @@ popular_currencies = [c[1][0] for c in curlist["cbr"]]
 def getCode(userinput, ruleset="cbr"):
     qs  = userinput.split()
     rating  = {}
-    for item in curlist[ruleset]:
-        curCode = item[1][0]
-        for chunk in (item[0]+ [curCode.lower()]):
-            # print(chunk)
-            for q in qs:
-                # print(chunk, q)
+    tags  = [None] * len(qs)
+
+    for i, q in enumerate(qs):            
+        # print(chunk, q)
+        for twoletter in staterules:
+            for rule in staterules[twoletter]:
+                # print(rule, "=", q)
+                if re.match(rule, q):
+                    # print(twoletter, rule)
+                    if tags[i] == None:
+                        tags[i] = {"STT": []}
+                    tags[i]["STT"].append(state2code[twoletter])
+                    
+        for item in curlist[ruleset]:
+            curCode = item[1][0]
+            for chunk in (item[0]+ [curCode.lower()]):
                 if re.match(chunk, q):
-                    if curCode in rating:
-                        rating[curCode] += 1
-                    else:
-                        rating[curCode] = 1
-    # print (rating)
-    if "USD" in rating and max(rating.values()) == 1: rating["USD"] += 1
-    return max(rating, key=rating.get) if rating else None
+                    if tags[i] == None:
+                        tags[i] = {"CUR": []}
+                    tags[i]["CUR"].append(curCode)
+                    # if curCode in rating:
+                        # rating[curCode] += 1
+                    # else:
+                        # rating[curCode] = 1
+    
+            # print(chunk)
+    
+    print (tags)
+    arr = []
+    for tag in tags:
+        if tag:
+            vals = list(tag.values())
+            if vals:
+                arr.extend(vals)
+    flat = [item for sublist in arr for item in sublist]    
+    # print(arr)
+    print(flat)
+    res  = max(flat, key=flat.count)
+    # print({x:a.count(x) for x in a})
+    return res if res else None
+    # if "USD" in rating and max(rating.values()) == 1: rating["USD"] += 1
+    # return max(rating, key=rating.get) if rating else None
 
 def datestring2date(datestring):
     return  datetime.datetime.strptime(datestring, '%d%m%Y').date()
@@ -115,6 +145,7 @@ def getETH():
         d = r.json()["result"]["ethusd"]
     return d
     
+# https://chain.so/api#code-examples    
 def getChainSo(code):
     r = requests.get("https://chain.so/api/v2/get_price/" + code)
     d  = None
@@ -216,7 +247,7 @@ def processRequest(userinput, userdate=None):
                     
                 res = prefix + str(data['nom']) +" "+ \
                 data['name'][:1].lower() + data['name'][1:] + " = " + \
-                str(data['val']).replace('.', ',')+"₽" 
+                ("%.2f" % data['val']).replace('.', ',')+"₽" 
             else:
                 pass
         else:
