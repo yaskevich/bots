@@ -1,4 +1,6 @@
-
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
 import sys
 import re
 import datetime
@@ -17,90 +19,12 @@ table_currencies = db.table('currencies')
 
 # code change because of currency denomination: BYR → BYN, July 1, 2016
 byr2bynDay  =  datetime.datetime.strptime("20160701", "%Y%m%d").date()
-# https://github.com/carpedm20/emoji/blob/master/emoji/unicode_codes.py
-curlist  = {    
-    "cs" : [
-        [["Zcash"], ["ZEC"]],
-        [[r"\bд[эа]ш"], ["DASH"]],
-        [[r"\bла[йи]тко[ийе]н", ], ["LTC"]],
-        [[r"\bдоге", ], ["DOGE"]],
-        ],
-    "bc" : [
-        [[r"\bбит[о]к",r"\bбитко[ийе]н", r"₿" ], ["BTC"]],
-        ],
-    "es" : [ # 
-        [[r"\bэфир",r"\bэтер", r"Ξ" ], ["ETH"]],
-        ],
-    "cbr": [
-        [[r"\bдо[л]+ар", r"\bбакс", r":heavy_dollar_sign:", r'зел[её]н' ], ["USD"]],
-        [[r"\bдо[л]+ар"], ["AUD"]],
-        [[r"\bманат"], ["AZN"]],
-        [[r"\bфунт",r"\bстерлинг", r'£'], ["GBP"]],
-        [[r"\bдрам"], ["AMD"]],
-        [[r"\bрубе?л"], ["BYN"]],
-        [[r"\bлев"], ["BGN"]],
-        [[r"\bреал"], ["BRL"]],
-        [[r"\bфоринт"], ["HUF"]],
-        [[r"\bдо[л]+ар"], ["HKD"]],
-        [[r"\bкрон"], ["DKK"]],	
-        [[r"\bевро\b", r"€"], ["EUR"]],
-        [[r"\bрупи"], ["INR"]],
-        [[r"\bтенге"], ["KZT"]],
-        [[r"\bдо[л]+ар"], ["CAD"]],
-        [[r"\bсом"], ["KGS"]],
-        [[r"\bюан"], ["CNY"]],
-        [[r"\bлее", r"\bлея", r"\bлей"], ["MDL"]],
-        [[r"\bкрон"], ["NOK"]],
-        [[r"\bзлот"], ["PLN"]],
-        [[r"\bлее", r"\bлея", r"\bлей"], ["RON"]],
-        [[r"\bсдр"], ["XDR"]],
-        [[r"\bдо[л]+ар"], ["SGD"]],
-        [[r"\bсомон"], ["TJS"]],
-        [[r"\bлир"], ["TRY"]],
-        [[r"\bманат"], ["TMT"]],
-        [[r"\bсум"], ["UZS"]],
-        [[r"\bгривен", r"\bгривн"], ["UAH"]],
-        [[r"\bкрон"], ["CZK"]],
-        [[r"\bкрон"], ["SEK"]],
-        [[r"\bфранк"], ["CHF"]],
-        [[r"\bрэнд",r"\bранд"], ["ZAR"]],
-        [[r"\bвон"], ["KRW"]],
-        [[r"\bиен",r"\bен", r'¥'], ["JPY"]]
-        ],
-}
+
 popular_currencies = [c[1][0] for c in curlist["cbr"]]
 
-def getCode(userinput, ruleset="cbr"):
-    qs  = userinput.split()
-    rating  = {}
-    tags  = [None] * len(qs)
+# state
 
-    for i, q in enumerate(qs):            
-        # print(chunk, q)
-        for twoletter in staterules:
-            for rule in staterules[twoletter]:
-                # print(rule, "=", q)
-                if re.match(rule, q):
-                    # print(twoletter, rule)
-                    if tags[i] == None:
-                        tags[i] = {"STT": []}
-                    tags[i]["STT"].append(state2code[twoletter])
-                    
-        for item in curlist[ruleset]:
-            curCode = item[1][0]
-            for chunk in (item[0]+ [curCode.lower()]):
-                if re.match(chunk, q):
-                    if tags[i] == None:
-                        tags[i] = {"CUR": []}
-                    tags[i]["CUR"].append(curCode)
-                    # if curCode in rating:
-                        # rating[curCode] += 1
-                    # else:
-                        # rating[curCode] = 1
-    
-            # print(chunk)
-    
-    print (tags)
+def getCur(tags):
     arr = []
     for tag in tags:
         if tag:
@@ -108,14 +32,110 @@ def getCode(userinput, ruleset="cbr"):
             if vals:
                 arr.extend(vals)
     flat = [item for sublist in arr for item in sublist]    
-    # print(arr)
-    print(flat)
-    res  = max(flat, key=flat.count)
-    # print({x:a.count(x) for x in a})
-    return res if res else None
-    # if "USD" in rating and max(rating.values()) == 1: rating["USD"] += 1
-    # return max(rating, key=rating.get) if rating else None
+    return max(flat, key=flat.count) if flat else None
+    
+def getCode(userinput):
+    qs  = userinput.split()
+    rating  = {}
+    tags  = [None] * len(qs)
+    src = {}
+    country = []
+    for i, q in enumerate(qs):            
+        print(i, q)
+        if re.match(r"\d+", q):
+            tags[i] = {"NUM": q}
+        
+        for twoletter in staterules:
+            for rule in staterules[twoletter]:
+                # print(rule, "=", q)
+                if re.match(rule, q, flags=re.IGNORECASE):
+                    # print(twoletter, rule)
+                    if tags[i] == None:
+                        tags[i] = {"STT": []}
+                    countryCode = state2code[twoletter]
+                    print("now",twoletter)
+                    tags[i]["STT"].append(countryCode)
+                    country.append(twoletter)
+        
+        
+        for k in list(curlist.keys()):
+            for item in curlist[k]:
+                curCode = item[1][0]
+                for chunk in (item[0]+ [curCode.lower()]):
+                    if re.match(chunk, q):
+                        if tags[i] == None:
+                            tags[i] = {"CUR": []}
+                        tags[i]["CUR"].append(curCode)
+                        src[curCode] = k
 
+    print (tags)
+    print (src)
+    
+    grammar = ""
+    for tt in tags:
+        grammar += next(iter(tt)) if tt else "" # SEP
+        grammar += " "
+    
+    # grammar = re.sub(r"^(SEP)\s+","", grammar)
+    print(grammar)
+    
+    
+    amount  = 1
+    slots = []
+    current_slot = 0
+    res =  {type: "na"}
+    
+    # print(tags)
+    # NUM STT CUR
+    if re.match ("\s*NUM\s*[STT]*\s*CUR\s*[STT]*\s*CUR", grammar):
+        # print("bingo")
+        for i, item in enumerate(tags):            
+        # for item in tags:
+            # print(">", item)
+            if item:
+                key = next(iter(item))
+                if key in ['STT', 'CUR']:
+                    # print("lol", item)
+                    try:
+                        slots[current_slot].extend(item[key])
+                    except IndexError:
+                        slots.append(item[key])
+                    # if slots
+                    
+                elif item and 'NUM' in item:
+                    amount = item['NUM']               
+                    # print(item['NUM'])
+                    # del tags[i]
+            else:
+                current_slot +=1
+        print(slots[0], slots[1])
+        if slots[1] == ['RUB', 'BYN']:
+            slots[1] = ['RUB']
+        c1 = max(slots[0], key=slots[0].count)
+        c2 = max(slots[1], key=slots[1].count)
+        res  = {"type":"con", "qty": amount, "c1": c1, "c2": c2, "src1": src[c1], "src2": src[c2]}
+    elif not re.findall("CUR", grammar):
+        print("not cur")
+        return None
+    else:
+        print("fallback")
+        cc = getCur(tags)
+        # {'RUB': 'ru', 'BYN': 'cbr'}
+        # print(cc, src)
+        this_src = ""
+        if not src:
+            if cc in popular_currencies:
+                this_src = "cbr" 
+            else:
+                this_src = "na"
+        else:
+            if cc in src:
+                print("aaa", src, cc)
+                this_src =  src[cc]
+        
+        res = {"type":"cur", "code":cc, "src": this_src, "country": country} if this_src else None
+    return res
+ 
 def datestring2date(datestring):
     return  datetime.datetime.strptime(datestring, '%d%m%Y').date()
     
@@ -130,34 +150,41 @@ def getCBRdata(url, data={}):
         # print(json.dumps(d, indent=4, ensure_ascii=False))
     return d
 
-def getBTC():
+def getBTC(data, date):
     r = requests.get("https://blockchain.info/ticker")
     # r = requests.get("https://blockchain.info/tobtc?currency=RUB&value=1")
     d  = None
     if r.status_code == 200:
-        d = r.json()
-    return d    
+        json = r.json()
+        d  = json["RUB"]["last"]
+    return { "rub": d }
 
-def getETH():
+
+# https://chain.so/api#code-examples    
+def getChainSo(data, date):
+    r = requests.get("https://chain.so/api/v2/get_price/" + data["code"])
+    d  = None
+    if r.status_code == 200:
+        datum = r.json()["data"]["prices"][0]
+        price  = float(datum["price"])
+        price_base = datum["price_base"]
+        base  = processCurrencies(price_base)
+        d  = price * float(base["val"])
+    return { "rub": d }
+
+def getETH(data, date):
     r = requests.get("https://api.etherscan.io/api?module=stats&action=ethprice&apikey=YourApiKeyToken")
     d  = None
     if r.status_code == 200:
         d = r.json()["result"]["ethusd"]
-    return d
-    
-# https://chain.so/api#code-examples    
-def getChainSo(code):
-    r = requests.get("https://chain.so/api/v2/get_price/" + code)
-    d  = None
-    if r.status_code == 200:
-        data = r.json()["data"]["prices"][0]
-        price  = float(data["price"])
-        price_base = data["price_base"]
-        base  = processCurrencies(price_base)
-        d  = price * float(base["val"])
-    return d
+        usd  = processCurrencies()        
+    return { "rub": float(d)*usd["val"], "usd": d }
 
-def processCurrencies(code = "USD", indate = datetime.date.today()):    
+def processCurrencies(data, indate = datetime.date.today()):   
+
+    code  = data["code"] if "code" in data else "USD"
+    # print("ccu", code, indate)
+    # sys.exit()
     bankdate = CBRdate(indate)
     # print(code, bankdate)
     # CBRdate(datestring2date('24052019'))
@@ -177,20 +204,114 @@ def processCurrencies(code = "USD", indate = datetime.date.today()):
                 currencies_object = {'reqdate': bankdate, 'realdate':  currencies_data["ValCurs"]["Date"].replace(".", "/"), 'code': x["CharCode"], "nom": int(x["Nominal"]), "name": x["Name"], "val": float(x["Value"].replace(",", "."))}
                 table_currencies.insert(currencies_object)
                 if x["CharCode"] == code: 
-                    data = currencies_object
+                    datum = currencies_object
             # print(currencies_data)
     else:
         print(code)
         fulldata = table_currencies.search((dbdata.code == code) & (dbdata.reqdate == bankdate))
-        data = fulldata[0] if fulldata else None
-    return data
+        datum = fulldata[0] if fulldata else None
+    if datum: 
+        datum["rub"] = datum["val"] # just to not update db, renew db later
+        # print("dfdsfsdfs", data)
+        # datum["country"] = data["country"][0]
+    # print("cbr", datum)
+    return datum
 
 # def extract_emojis(str):
   # return ''.join(c for c in str if c in emoji.UNICODE_EMOJI)
   
+def stub(data, date):
+    return { "rub": 1}  
+    
+processor = {
+    "cs": getChainSo,
+    "bc": getBTC,
+    "es": getETH,
+    "cbr": processCurrencies,
+    "ru" : stub
+    
+}
+symbols = {
+    "BTC": "₿",
+    "USD": "$",
+    "AUD": "$",
+    "CAD": "$",
+    "RUB": "₽",
+    "BYN": "₽",
+    "UAH": "₴",
+    "EUR": "€",
+    "GBP": "£",
+    "JPY": "¥",
+    "CNY": "¥",
+    "ILS": "₪",
+    "INR": "₨",
+    "KRW": "₩",
+    "NGN": "₦",
+    "THB": "฿",
+    "KZT": "₸",
+}
+
+def flagByCode(code):
+    flags  = [st["emoji"] for st in states if st["code"] == code[0:2]]
+    flag  = flags[0] if flags else code
+    if code in ["BTC", "ETH", "ZEC", "DOGE", "LTC"]:
+        flag = ""
+    return flag
+
+def output(data, bankdate):
+    currency = data["code"]
+    group = data["src"]
+    res = None
+    if data["src"] == "na":
+        if not data["code"]:
+            return "Нет информации"
+            
+        cur_eng = " (" + currencies_info[currency]["name"] + ")" if \
+                currency in currencies_info else ""
+        res  = ""
+        if data and "country" in data and data["country"]:
+            res = "Страна валюты – " + code2country[data["country"][0]] + ". "
+        res += "Нет данных по курсу этой валюты" + cur_eng
+        return res
+    new_data = processor[group](data, bankdate)
+    threshold=2 
+    frm = "%."+str(threshold)+"f"    
+    if currency in symbols:
+        currency = symbols[currency]
+    
+    
+    
+    flag  = flagByCode(data["code"])
+    
+  
+    
+    if new_data and "usd" in new_data:
+        res = "1" + currency + "= "+  new_data["usd"] + "$ (≈" + str("%.0f" %(new_data["rub"]))+"₽)"
+    elif group == "cbr":
+        print("common", new_data)
+        if new_data:
+            prefix = ""
+            postfix = " (на дату " + new_data["realdate"] + ")" if "realdate" in new_data else ""
+            # print("=====", new_data)
+            if data["country"]:
+                if ((currency  == "USD" and data["country"][0] != "US") or (currency  == "EUR" and data["country"][0] != "EU")):
+                    country_name = code2country[data["country"][0]]
+                    prefix = country_name + ". "
+            # # new_data['name'][:1].lower() + new_data['name'][1:] + " = " + \    
+            
+            res = str(new_data['nom']) + currency + flag + "= " + \
+            ("%.2f" % new_data['val']).replace('.', ',')+"₽🇷🇺" + postfix
+    else:
+        # print("else", res)
+        # res =  "1" + currency + flag + "= "+  (frm % new_data["rub"]).rstrip('0').rstrip('.') + "₽🇷🇺" 
+        res =  "1" + currency + flag + "= "+  (frm % new_data["rub"]) + "₽🇷🇺" 
+    return res
+    
 def processRequest(userinput, userdate=None):
     # emojis  = re.findall(r'[^\w\s,]', userinput)
-    res = "Нет данных на эту дату"
+    # if not re.match("курс", grammar):
+    bankdate  = datestring2date(userdate) if userdate else datetime.date.today()
+    res = None
     country_name = ""
     currency_code = None
     state_code = None
@@ -204,63 +325,57 @@ def processRequest(userinput, userdate=None):
             
     if not currency_code:        
         userinput = emoji.demojize(userinput)
-        print(userinput)
-        currency_code = getCode(userinput, "cbr")
-        if not currency_code:
-            currency_code = getCode(userinput, "bc")
-
-        if not currency_code:
-            currency_code = getCode(userinput, "es")
+        # print("input", userinput)
         
-        if not currency_code:
-            currency_code = getCode(userinput, "cs")
         
-    bankdate  = datestring2date(userdate) if userdate else datetime.date.today()
-    if currency_code:
-        if currency_code  == "GIP":
-            currency_code  = "GBP"
-        
-        if currency_code == "RUB":
-            res = "1 российский рубль стоит 1 российский рубль"
-        elif currency_code == "BTC":
-            # btcInRub  = "%.9f" % getBTC()
-            # res = "1 ₿ = "+  btcInRub.rstrip('0') + "₽" 
-            bcdata = getBTC()
-            res = "1₿ = "+  ("%.4f" % bcdata["RUB"]["last"]).rstrip('0') + "₽" 
-        elif currency_code in ["LTC", "DOGE", "ZEC"]: # , "BTC"
-            # btcInRub  = "%.9f" % getBTC()
-            # res = "1 ₿ = "+  btcInRub.rstrip('0') + "₽" 
-            rub = getChainSo(currency_code)
-            res = "1 " + currency_code + " = "+  ("%.2f" % rub).rstrip('0') + "₽" 
-        elif currency_code == "ETH":
-            ethdata = getETH()
-            usd  = processCurrencies()
-            # print(ethdata, usd["val"])
-            res = "1 ETH = "+  ethdata + "$ (≈" + str("%.0f" %(usd["val"]*float(ethdata)))+"₽)"
-        elif currency_code in popular_currencies:
-            data  = processCurrencies(currency_code, bankdate)
-            # print(f"{data['nom']} {data['name']} = {str(data['val']).replace('.', ',')}₽")
-            if data:
-                prefix = ""
-                if ((currency_code  == "USD" and state_code != "US") or (currency_code  == "EUR" and state_code != "EU")) and country_name:
-                    prefix = country_name + ". "
-                    
-                res = prefix + str(data['nom']) +" "+ \
-                data['name'][:1].lower() + data['name'][1:] + " = " + \
-                ("%.2f" % data['val']).replace('.', ',')+"₽" 
-            else:
-                pass
-        else:
-            cur_eng = " (" + currencies_info[currency_code]["name"] + ")" if \
-            currency_code in currencies_info else ""
+        data = getCode(userinput)
+        print("data", data)
+        if data:
+            if data["type"] == "cur":
+                if data["code"] == "GIP": data["code"] = "GBP" 
+                formatted  = output(data, bankdate)
+                res  = formatted if formatted else "Нет данных на эту дату"
                 
-            res = "Страна валюты – " + country_name + \
-            ". Нет данных по курсу этой валюты" + cur_eng
-    else:
-        res = "Нет данных об этой валюте"
+                # if currency_code == "RUB":
+                    # res = "1 российский рубль стоит 1 российский рубль"
+                # else:
+                   
+            elif data["type"] == "con":
+                print("Conversion implement", data)
+                c1 = {"code": data["c1"]}
+                c2 = {"code": data["c2"]}
+                f1 = flagByCode(data["c1"])
+                f2 = flagByCode(data["c2"])
+                s1 = symbols[data["c1"]] if data["c1"] in symbols else data["c1"]
+                s2 = symbols[data["c2"]] if data["c2"] in symbols else data["c2"]
+                
+                c1_res = processor[data["src1"]](c1, bankdate)
+                c2_res = processor[data["src2"]](c2, bankdate)
+                
+                c1_nom  = float(c1_res["nom"]) if "nom" in c1_res else 1
+                c2_nom  = float(c2_res["nom"]) if "nom" in c2_res else 1
+                
+                # print("wow", c1_res, c2_res,)
+                # print("wow", float(c1_res["rub"]), float(c2_res["rub"]))
+                n1  = float(data["qty"])* float(c1_res["rub"])/c1_nom 
+                n2  = float(c2_res["rub"]) / c2_nom
+                # print(n1, n2)
+                number = n1/n2
+                # print("wow", number)
+                out  = ("%.2f" % number)
+                sign  = "="
+                if out == "0.00":
+                    sign = "<"
+                    out = "0.01"
+                
+                    
+                res =  data["qty"] + s1 + f1 + sign +" "+  out + s2 + f2  
+                
+            else:
+                res = "Нет данных"
     
     print(res)
-    return res
+    return res if res else ""
 
 # query = "доллар"
 # res  = getCode(query)
